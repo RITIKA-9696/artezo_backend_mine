@@ -166,43 +166,43 @@ public class ProductController {
         }
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<ProductResponseDto> getProductById(@PathVariable Long id) {
-        log.info("Fetching product by id: {}", id);
-        return ResponseEntity.ok(productService.getProductById(id));
+    @GetMapping("/get-by-productPrimeId/{productPrimeId}")
+    public ResponseEntity<ProductResponseDto> getProductById(@PathVariable Long productPrimeId) {
+        log.info("Fetching product by productPrimeId: {}", productPrimeId);
+        return ResponseEntity.ok(productService.getProductById(productPrimeId));
     }
 
-    @GetMapping("/str/{productStrId}")
+    @GetMapping("/get-product-by-productStrId/{productStrId}")
     public ResponseEntity<ProductResponseDto> getProductByStrId(@PathVariable String productStrId) {
         log.info("Fetching product by strId: {}", productStrId);
         return ResponseEntity.ok(productService.getProductByStrId(productStrId));
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<ProductResponseDto> updateProduct(@PathVariable Long id, @RequestBody CreateProductRequestDto request) {
-        log.info("Full update product id: {}", id);
-        return ResponseEntity.ok(productService.updateProduct(id, request));
+    @PutMapping("/put-product/{productPrimeId}")
+    public ResponseEntity<ProductResponseDto> updateProduct(@PathVariable Long productPrimeId, @RequestBody CreateProductRequestDto request) {
+        log.info("Full update product productPrimeId: {}", productPrimeId);
+        return ResponseEntity.ok(productService.updateProduct(productPrimeId, request));
     }
 
-    @PatchMapping("/{id}")
-    public ResponseEntity<ProductResponseDto> patchProduct(@PathVariable Long id, @RequestBody CreateProductRequestDto request) {
-        log.info("Patch product id: {}", id);
-        return ResponseEntity.ok(productService.patchProduct(id, request));
+    @PatchMapping("/patch-product/{productPrimeId}")
+    public ResponseEntity<ProductResponseDto> patchProduct(@PathVariable Long productPrimeId, @RequestBody CreateProductRequestDto request) {
+        log.info("Patch product productPrimeId: {}", productPrimeId);
+        return ResponseEntity.ok(productService.patchProduct(productPrimeId, request));
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteProduct(@PathVariable Long id) {
-        log.info("Soft delete product id: {}", id);
-        productService.deleteProduct(id);
+    @DeleteMapping("/delete-by-productPrimeId/{productPrimeId}")
+    public ResponseEntity<Void> deleteProduct(@PathVariable Long productPrimeId) {
+        log.info("Soft delete product productPrimeId: {}", productPrimeId);
+        productService.deleteProduct(productPrimeId);
         return ResponseEntity.noContent().build();
     }
 
     // ────────────────────────────────────────────────
     //                  IMAGE SERVING (byte[] → fast for small files)
     // ────────────────────────────────────────────────
-    @GetMapping(value = "/{id}/main", produces = {MediaType.IMAGE_JPEG_VALUE, MediaType.IMAGE_PNG_VALUE, MediaType.IMAGE_GIF_VALUE})
-    public ResponseEntity<byte[]> getMainImage(@PathVariable Long id) {
-        byte[] data = productService.getProductMainImageData(id);
+    @GetMapping(value = "/{productPrimeId}/main", produces = {MediaType.IMAGE_JPEG_VALUE, MediaType.IMAGE_PNG_VALUE, MediaType.IMAGE_GIF_VALUE})
+    public ResponseEntity<byte[]> getMainImage(@PathVariable Long productPrimeId) {
+        byte[] data = productService.getProductMainImageData(productPrimeId);
         if (data == null || data.length == 0) return ResponseEntity.notFound().build();
 
         return ResponseEntity.ok()
@@ -211,9 +211,9 @@ public class ProductController {
                 .body(data);
     }
 
-    @GetMapping(value = "/{id}/mockup/{index}", produces = {MediaType.IMAGE_JPEG_VALUE, MediaType.IMAGE_PNG_VALUE})
-    public ResponseEntity<byte[]> getMockupImage(@PathVariable Long id, @PathVariable int index) {
-        List<byte[]> images = productService.getProductMockupImagesData(id);
+    @GetMapping(value = "/{productPrimeId}/mockup/{index}", produces = {MediaType.IMAGE_JPEG_VALUE, MediaType.IMAGE_PNG_VALUE})
+    public ResponseEntity<byte[]> getMockupImage(@PathVariable Long productPrimeId, @PathVariable int index) {
+        List<byte[]> images = productService.getProductMockupImagesData(productPrimeId);
         if (images == null || index < 0 || index >= images.size()) return ResponseEntity.notFound().build();
 
         byte[] data = images.get(index);
@@ -224,8 +224,8 @@ public class ProductController {
     }
 
     @GetMapping(value = "/{productId}/variant/{variantId}/main", produces = MediaType.ALL_VALUE)
-    public ResponseEntity<byte[]> getVariantMainImage(@PathVariable Long productId, @PathVariable String variantId) {
-        byte[] data = productService.getVariantMainImageData(productId, variantId);
+    public ResponseEntity<byte[]> getVariantMainImage(@PathVariable Long productPrimeId, @PathVariable String variantId) {
+        byte[] data = productService.getVariantMainImageData(productPrimeId, variantId);
         if (data == null || data.length == 0) return ResponseEntity.notFound().build();
 
         return ResponseEntity.ok()
@@ -239,14 +239,14 @@ public class ProductController {
     // ────────────────────────────────────────────────
 
 
-    @GetMapping(value = "/{id}/installation-video/{stepIndex}", produces = "video/mp4")
+    @GetMapping(value = "/{productPrimeId}/installation-video/{stepIndex}", produces = "video/mp4")
     public ResponseEntity<InputStreamResource> streamInstallationVideo(
-            @PathVariable Long id,
+            @PathVariable Long productPrimeId,
             @PathVariable int stepIndex,
             @RequestHeader(value = "Range", required = false) String rangeHeader,
             HttpServletRequest request) throws IOException {
 
-        byte[] fullVideoBytes = productService.getInstallationVideoData(id, stepIndex);
+        byte[] fullVideoBytes = productService.getInstallationVideoData(productPrimeId, stepIndex);
         if (fullVideoBytes == null || fullVideoBytes.length == 0) {
             return ResponseEntity.notFound().build();
         }
@@ -297,15 +297,15 @@ public class ProductController {
      * Get the main product video
      * Returns 200 with video bytes or 404 if not found
      */
-    @GetMapping(value = "/{productId}/product-video", produces = {"video/mp4", "application/octet-stream"})
+    @GetMapping(value = "/{productPrimeId}/product-video", produces = {"video/mp4", "application/octet-stream"})
     public ResponseEntity<InputStreamResource> getProductVideo(
-            @PathVariable Long productId,
+            @PathVariable Long productPrimeId,
             @RequestHeader(value = "Range", required = false) String rangeHeader,
             HttpServletRequest request) throws IOException {
 
-        log.info("Streaming product video for productId {}", productId);
+        log.info("Streaming product video for productId {}", productPrimeId);
 
-        byte[] fullVideoBytes = productService.getProductVideoData(productId);
+        byte[] fullVideoBytes = productService.getProductVideoData(productPrimeId);
 
         if (fullVideoBytes == null || fullVideoBytes.length == 0) {
             return ResponseEntity.notFound().build();
@@ -343,7 +343,7 @@ public class ProductController {
         headers.set("Accept-Ranges", "bytes");
         headers.set("ETag", etag);
         headers.set("Cache-Control", "public, max-age=86400");
-        headers.set("Content-Disposition", "inline; filename=\"product-video-" + productId + ".mp4\"");
+        headers.set("Content-Disposition", "inline; filename=\"product-video-" + productPrimeId + ".mp4\"");
 
         if (rangeHeader != null) {
             headers.set(HttpHeaders.CONTENT_RANGE, "bytes " + start + "-" + end + "/" + fileSize);
