@@ -4,83 +4,104 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "banner_pages")
-public class BannerEntity {
+@Table(name = "banner_slides")
+public class BannerSlide {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
-    private String pageName;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "banner_page_id", nullable = false)
+    private BannerPage bannerPage;
 
-    @Column(columnDefinition = "TEXT")  // Store JSON as TEXT
-    private String slides;               // JSON array of slides
+    @Column(name = "dot_position", nullable = false)
+    private Integer dotPosition;
 
-    private String bannerFileTwo;
-    private String bannerFileThree;
-    private String bannerFileFour;
+    // Left Main fields
+    @Column(name = "left_main_title")
+    private String leftMainTitle;
 
-    private String status;                // draft, published
+    @Lob
+    @Column(name = "left_main_image", columnDefinition = "LONGBLOB")
+    private byte[] leftMainImage;  // Store as byte array
+
+    @Column(name = "left_main_image_url")
+    private String leftMainImageUrl;  // URL for accessing the image
+
+    @Column(name = "left_main_redirect_url")
+    private String leftMainRedirectUrl;
+
+    // Right Top fields
+    @Lob
+    @Column(name = "right_top_image", columnDefinition = "LONGBLOB")
+    private byte[] rightTopImage;  // Store as byte array
+
+    @Column(name = "right_top_image_url")
+    private String rightTopImageUrl;  // URL for accessing the image
+
+    @Column(name = "right_top_redirect_url")
+    private String rightTopRedirectUrl;
+
+    // Right Card fields
+    @Column(name = "right_card_title")
+    private String rightCardTitle;
+
+    @Column(name = "right_card_description")
+    private String rightCardDescription;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
-
     // Constructors
-    public BannerEntity() {}
+    public BannerSlide() {}
 
-    public BannerEntity(String pageName, String slides, String bannerFileTwo,
-                      String bannerFileThree, String bannerFileFour, String status) {
-        this.pageName = pageName;
-        this.slides = slides;
-        this.bannerFileTwo = bannerFileTwo;
-        this.bannerFileThree = bannerFileThree;
-        this.bannerFileFour = bannerFileFour;
-        this.status = status;
-        this.createdAt = LocalDateTime.now();
-        this.updatedAt = LocalDateTime.now();
+    public BannerSlide(Integer dotPosition) {
+        this.dotPosition = dotPosition;
     }
 
-    // Getters and Setters (like your Product entity)
+    // Getters and Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
-    public String getPageName() { return pageName; }
-    public void setPageName(String pageName) { this.pageName = pageName; }
+    public BannerPage getBannerPage() { return bannerPage; }
+    public void setBannerPage(BannerPage bannerPage) { this.bannerPage = bannerPage; }
 
-    public String getSlides() { return slides; }
-    public void setSlides(String slides) { this.slides = slides; }
+    public Integer getDotPosition() { return dotPosition; }
+    public void setDotPosition(Integer dotPosition) { this.dotPosition = dotPosition; }
 
-    public String getBannerFileTwo() { return bannerFileTwo; }
-    public void setBannerFileTwo(String bannerFileTwo) { this.bannerFileTwo = bannerFileTwo; }
+    public String getLeftMainTitle() { return leftMainTitle; }
+    public void setLeftMainTitle(String leftMainTitle) { this.leftMainTitle = leftMainTitle; }
 
-    public String getBannerFileThree() { return bannerFileThree; }
-    public void setBannerFileThree(String bannerFileThree) { this.bannerFileThree = bannerFileThree; }
+    public byte[] getLeftMainImage() { return leftMainImage; }
+    public void setLeftMainImage(byte[] leftMainImage) { this.leftMainImage = leftMainImage; }
 
-    public String getBannerFileFour() { return bannerFileFour; }
-    public void setBannerFileFour(String bannerFileFour) { this.bannerFileFour = bannerFileFour; }
+    public String getLeftMainImageUrl() { return leftMainImageUrl; }
+    public void setLeftMainImageUrl(String leftMainImageUrl) { this.leftMainImageUrl = leftMainImageUrl; }
 
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+    public String getLeftMainRedirectUrl() { return leftMainRedirectUrl; }
+    public void setLeftMainRedirectUrl(String leftMainRedirectUrl) { this.leftMainRedirectUrl = leftMainRedirectUrl; }
+
+    public byte[] getRightTopImage() { return rightTopImage; }
+    public void setRightTopImage(byte[] rightTopImage) { this.rightTopImage = rightTopImage; }
+
+    public String getRightTopImageUrl() { return rightTopImageUrl; }
+    public void setRightTopImageUrl(String rightTopImageUrl) { this.rightTopImageUrl = rightTopImageUrl; }
+
+    public String getRightTopRedirectUrl() { return rightTopRedirectUrl; }
+    public void setRightTopRedirectUrl(String rightTopRedirectUrl) { this.rightTopRedirectUrl = rightTopRedirectUrl; }
+
+    public String getRightCardTitle() { return rightCardTitle; }
+    public void setRightCardTitle(String rightCardTitle) { this.rightCardTitle = rightCardTitle; }
+
+    public String getRightCardDescription() { return rightCardDescription; }
+    public void setRightCardDescription(String rightCardDescription) { this.rightCardDescription = rightCardDescription; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 
-    public LocalDateTime getUpdatedAt() { return updatedAt; }
-    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
-
-    // Auto-update timestamps
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
-        updatedAt = LocalDateTime.now();
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
     }
 }

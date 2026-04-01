@@ -5,7 +5,6 @@ import com.artezo.dto.request.BannerSummaryDto;
 import com.artezo.dto.request.SlideDto;
 import com.artezo.dto.response.ApiResponse;
 import com.artezo.dto.response.BannerResponseDto;
-import com.artezo.dto.response.BannerResponseDtoWithPreview;
 import com.artezo.service.BannerService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -18,27 +17,22 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/banners")
-public class BannerControllerEnhanced {
+public class BannerController {
 
-    private static final Logger log = LoggerFactory.getLogger(BannerControllerEnhanced.class);
+    private static final Logger log = LoggerFactory.getLogger(BannerController.class);
     private final BannerService bannerService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public BannerControllerEnhanced(BannerService bannerService) {
+    public BannerController(BannerService bannerService) {
         this.bannerService = bannerService;
     }
 
-    /**
-     * ✅ CREATE BANNER WITH FILE PREVIEW SUPPORT
-     * Converts file bytes to base64 for instant preview after creation
-     */
     @PostMapping(value = "/create-banner", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<ApiResponse<BannerResponseDtoWithPreview>> createBanner(
+    public ResponseEntity<ApiResponse<BannerResponseDto>> createBanner(
             @RequestParam("pageName") String pageName,
             @RequestParam(value = "slidesMetadata", required = false) String slidesMetadataJson,
             @RequestParam(value = "leftMainImages", required = false) List<MultipartFile> leftMainImages,
@@ -66,6 +60,12 @@ public class BannerControllerEnhanced {
                         objectMapper.readValue(slidesMetadataJson, BannerRequestDto.SlideMetadata[].class);
 
                 log.info("Processing {} slides from metadata", metadataArray.length);
+
+                // ✅ DEBUG: Log metadata array length
+                System.out.println("=== METADATA ARRAY LENGTH: " + metadataArray.length);
+                for (int m = 0; m < metadataArray.length; m++) {
+                    System.out.println("Metadata " + m + ": " + metadataArray[m]);
+                }
 
                 for (int i = 0; i < metadataArray.length; i++) {
                     BannerRequestDto.SlideMetadata metadata = metadataArray[i];
@@ -114,6 +114,9 @@ public class BannerControllerEnhanced {
             requestDto.setSlides(slides);
             log.info("Total slides to save: {}", slides.size());
 
+            // ✅ DEBUG: Log final slides count
+            System.out.println("=== FINAL SLIDES COUNT BEFORE SERVICE: " + slides.size());
+
             // Set banner files if provided
             if (bannerFileTwo != null && !bannerFileTwo.isEmpty()) {
                 requestDto.setBannerFileTwo(bannerFileTwo.getBytes());
@@ -129,12 +132,8 @@ public class BannerControllerEnhanced {
             }
 
             BannerResponseDto created = bannerService.createPage(requestDto);
-
-            // ✅ CONVERT TO PREVIEW DTO WITH BASE64 IMAGES
-            BannerResponseDtoWithPreview previewDto = convertToPreviewDto(created, bannerFileTwo, bannerFileThree, bannerFileFour);
-
             return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(ApiResponse.success("Banner created successfully", previewDto));
+                    .body(ApiResponse.success("Banner created successfully", created));
 
         } catch (Exception e) {
             log.error("Error creating banner: {}", e.getMessage(), e);
@@ -143,12 +142,8 @@ public class BannerControllerEnhanced {
         }
     }
 
-    /**
-     * ✅ UPDATE BANNER WITH FILE PREVIEW SUPPORT
-     * Converts file bytes to base64 for instant preview after editing
-     */
     @PutMapping(value = "/update-banner/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<ApiResponse<BannerResponseDtoWithPreview>> updateBanner(
+    public ResponseEntity<ApiResponse<BannerResponseDto>> updateBanner(
             @PathVariable Long id,
             @RequestParam(value = "pageName", required = false) String pageName,
             @RequestParam(value = "slidesMetadata", required = false) String slidesMetadataJson,
@@ -162,7 +157,7 @@ public class BannerControllerEnhanced {
         log.info("PUT /api/banners/update-banner/{} - Updating banner", id);
 
         try {
-            // ✅ Enhanced logging for update operation
+            // Log file details
             logFileDetails("leftMainImages", leftMainImages);
             logFileDetails("rightTopImages", rightTopImages);
             logSingleFileDetails("bannerFileTwo", bannerFileTwo);
@@ -170,10 +165,11 @@ public class BannerControllerEnhanced {
             logSingleFileDetails("bannerFileFour", bannerFileFour);
 
             BannerRequestDto requestDto = new BannerRequestDto();
-            if (pageName != null && !pageName.isEmpty()) {
+
+            if (pageName != null) {
                 requestDto.setPageName(pageName);
             }
-            if (status != null && !status.isEmpty()) {
+            if (status != null) {
                 requestDto.setStatus(status);
             }
 
@@ -181,89 +177,75 @@ public class BannerControllerEnhanced {
 
             // Parse slides metadata
             if (slidesMetadataJson != null && !slidesMetadataJson.isEmpty()) {
+                log.info("Parsing slides metadata: {}", slidesMetadataJson);
                 BannerRequestDto.SlideMetadata[] metadataArray =
                         objectMapper.readValue(slidesMetadataJson, BannerRequestDto.SlideMetadata[].class);
 
-                log.info("✓ Processing {} slides for update", metadataArray.length);
+                log.info("Found {} slides in metadata", metadataArray.length);
 
                 for (int i = 0; i < metadataArray.length; i++) {
                     BannerRequestDto.SlideMetadata metadata = metadataArray[i];
                     SlideDto slideDto = new SlideDto();
-                    slideDto.setDotPosition(metadata.getDotPosition() != null ? metadata.getDotPosition() : i + 1);
+                    slideDto.setDotPosition(metadata.getDotPosition());
 
-                    // Left Main
                     SlideDto.LeftMain leftMain = new SlideDto.LeftMain();
-                    leftMain.setTitle(metadata.getLeftMainTitle() != null ? metadata.getLeftMainTitle() : "");
-                    leftMain.setRedirectUrl(metadata.getLeftMainRedirectUrl() != null ? metadata.getLeftMainRedirectUrl() : "#");
+                    leftMain.setTitle(metadata.getLeftMainTitle());
+                    leftMain.setRedirectUrl(metadata.getLeftMainRedirectUrl());
 
-                    if (leftMainImages != null && i < leftMainImages.size() && leftMainImages.get(i) != null && !leftMainImages.get(i).isEmpty()) {
-                        byte[] imageBytes = leftMainImages.get(i).getBytes();
-                        leftMain.setImage(imageBytes);
-                        log.info("✓ Slide {} leftMain image updated: {} bytes", i, imageBytes.length);
+                    if (leftMainImages != null && i < leftMainImages.size()) {
+                        MultipartFile file = leftMainImages.get(i);
+                        if (file != null && !file.isEmpty()) {
+                            leftMain.setImage(file.getBytes());
+                            log.info("Slide {} leftMain image size: {} bytes", i, file.getSize());
+                        }
                     }
                     slideDto.setLeftMain(leftMain);
 
-                    // Right Top
                     SlideDto.RightTop rightTop = new SlideDto.RightTop();
-                    rightTop.setRedirectUrl(metadata.getRightTopRedirectUrl() != null ? metadata.getRightTopRedirectUrl() : "#");
+                    rightTop.setRedirectUrl(metadata.getRightTopRedirectUrl());
 
-                    if (rightTopImages != null && i < rightTopImages.size() && rightTopImages.get(i) != null && !rightTopImages.get(i).isEmpty()) {
-                        byte[] imageBytes = rightTopImages.get(i).getBytes();
-                        rightTop.setImage(imageBytes);
-                        log.info("✓ Slide {} rightTop image updated: {} bytes", i, imageBytes.length);
+                    if (rightTopImages != null && i < rightTopImages.size()) {
+                        MultipartFile file = rightTopImages.get(i);
+                        if (file != null && !file.isEmpty()) {
+                            rightTop.setImage(file.getBytes());
+                            log.info("Slide {} rightTop image size: {} bytes", i, file.getSize());
+                        }
                     }
                     slideDto.setRightTop(rightTop);
 
-                    // Right Card
                     SlideDto.RightCard rightCard = new SlideDto.RightCard();
-                    rightCard.setTitle(metadata.getRightCardTitle() != null ? metadata.getRightCardTitle() : "");
-                    rightCard.setDescription(metadata.getRightCardDescription() != null ? metadata.getRightCardDescription() : "");
+                    rightCard.setTitle(metadata.getRightCardTitle());
+                    rightCard.setDescription(metadata.getRightCardDescription());
                     slideDto.setRightCard(rightCard);
 
                     slides.add(slideDto);
                 }
             }
 
-            // Only set slides if we processed any
             if (!slides.isEmpty()) {
                 requestDto.setSlides(slides);
+                log.info("Total slides to update: {}", slides.size());
             }
 
             // Set banner files if provided
-            if (bannerFileTwo != null && bannerFileTwo.getSize() > 0) {
-                try {
-                    requestDto.setBannerFileTwo(bannerFileTwo.getBytes());
-                    log.info("✓ Banner file two updated: {} bytes", bannerFileTwo.getSize());
-                } catch (IOException e) {
-                    log.error("✗ Failed to update bannerFileTwo: {}", e.getMessage());
-                }
+            if (bannerFileTwo != null && !bannerFileTwo.isEmpty()) {
+                requestDto.setBannerFileTwo(bannerFileTwo.getBytes());
+                log.info("Banner file two size: {} bytes", bannerFileTwo.getSize());
             }
-            if (bannerFileThree != null && bannerFileThree.getSize() > 0) {
-                try {
-                    requestDto.setBannerFileThree(bannerFileThree.getBytes());
-                    log.info("✓ Banner file three updated: {} bytes", bannerFileThree.getSize());
-                } catch (IOException e) {
-                    log.error("✗ Failed to update bannerFileThree: {}", e.getMessage());
-                }
+            if (bannerFileThree != null && !bannerFileThree.isEmpty()) {
+                requestDto.setBannerFileThree(bannerFileThree.getBytes());
+                log.info("Banner file three size: {} bytes", bannerFileThree.getSize());
             }
-            if (bannerFileFour != null && bannerFileFour.getSize() > 0) {
-                try {
-                    requestDto.setBannerFileFour(bannerFileFour.getBytes());
-                    log.info("✓ Banner file four updated: {} bytes", bannerFileFour.getSize());
-                } catch (IOException e) {
-                    log.error("✗ Failed to update bannerFileFour: {}", e.getMessage());
-                }
+            if (bannerFileFour != null && !bannerFileFour.isEmpty()) {
+                requestDto.setBannerFileFour(bannerFileFour.getBytes());
+                log.info("Banner file four size: {} bytes", bannerFileFour.getSize());
             }
 
             BannerResponseDto updated = bannerService.updatePage(id, requestDto);
-
-            // ✅ CONVERT TO PREVIEW DTO WITH BASE64 IMAGES
-            BannerResponseDtoWithPreview previewDto = convertToPreviewDto(updated, bannerFileTwo, bannerFileThree, bannerFileFour);
-
-            return ResponseEntity.ok(ApiResponse.success("Banner updated successfully", previewDto));
+            return ResponseEntity.ok(ApiResponse.success("Banner updated successfully", updated));
 
         } catch (Exception e) {
-            log.error("✗ Error updating banner: {}", e.getMessage(), e);
+            log.error("ERROR updating banner: ", e);  // This will print full stack trace
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("Failed to update banner: " + e.getMessage()));
         }
@@ -344,64 +326,7 @@ public class BannerControllerEnhanced {
         return ResponseEntity.ok(ApiResponse.success("Banner Management System is running", null));
     }
 
-    // ============== HELPER METHODS ==============
-
-    /**
-     * ✅ CONVERT RESPONSE TO PREVIEW DTO WITH BASE64 ENCODED IMAGES
-     * This allows immediate preview of files without additional API calls
-     */
-    private BannerResponseDtoWithPreview convertToPreviewDto(
-            BannerResponseDto response,
-            MultipartFile bannerFileTwo,
-            MultipartFile bannerFileThree,
-            MultipartFile bannerFileFour) {
-
-        BannerResponseDtoWithPreview previewDto = new BannerResponseDtoWithPreview();
-        previewDto.setId(response.getId());
-        previewDto.setPageName(response.getPageName());
-        previewDto.setSlides(response.getSlides());
-        previewDto.setStatus(response.getStatus());
-        previewDto.setCreatedAt(response.getCreatedAt());
-        previewDto.setUpdatedAt(response.getUpdatedAt());
-
-        // Set file URLs
-        previewDto.setBannerFileTwoUrl(response.getBannerFileTwoUrl());
-        previewDto.setBannerFileThreeUrl(response.getBannerFileThreeUrl());
-        previewDto.setBannerFileFourUrl(response.getBannerFileFourUrl());
-
-        // ✅ CONVERT FILES TO BASE64 FOR PREVIEW
-        try {
-            if (bannerFileTwo != null && !bannerFileTwo.isEmpty()) {
-                String base64 = Base64.getEncoder().encodeToString(bannerFileTwo.getBytes());
-                previewDto.setBannerFileTwoPreview("data:image/jpeg;base64," + base64);
-                log.debug("✓ Banner file two preview generated: {} bytes", bannerFileTwo.getSize());
-            }
-        } catch (IOException e) {
-            log.error("✗ Error converting bannerFileTwo to base64: {}", e.getMessage());
-        }
-
-        try {
-            if (bannerFileThree != null && !bannerFileThree.isEmpty()) {
-                String base64 = Base64.getEncoder().encodeToString(bannerFileThree.getBytes());
-                previewDto.setBannerFileThreePreview("data:image/jpeg;base64," + base64);
-                log.debug("✓ Banner file three preview generated: {} bytes", bannerFileThree.getSize());
-            }
-        } catch (IOException e) {
-            log.error("✗ Error converting bannerFileThree to base64: {}", e.getMessage());
-        }
-
-        try {
-            if (bannerFileFour != null && !bannerFileFour.isEmpty()) {
-                String base64 = Base64.getEncoder().encodeToString(bannerFileFour.getBytes());
-                previewDto.setBannerFileThreePreview("data:image/jpeg;base64," + base64);
-                log.debug("✓ Banner file four preview generated: {} bytes", bannerFileFour.getSize());
-            }
-        } catch (IOException e) {
-            log.error("✗ Error converting bannerFileFour to base64: {}", e.getMessage());
-        }
-
-        return previewDto;
-    }
+    // ============== HELPER METHODS FOR LOGGING ==============
 
     /**
      * Log details about a list of multipart files
